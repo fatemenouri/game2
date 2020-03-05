@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Scenes</title>
+
+    <style>
+
+        body {
+
+        @include display(flex);
+        @include align-content(center);
+            color: #353535;
+            min-height: 100vh;
+            font-family: 'Open Sans', sans-serif;
+            font-size: 14px;
+            text-align: center;
+            background-color: lightgreen;
+            margin: 0 auto;
+            overflow: hidden;
+
+        }
+        .des{
+            margin-left: 40px;
+            margin-top: 40px;
+            position: absolute;
+
+            z-index: 10;
+        }
+        .container {
+            background-color: white;
+            box-shadow: 0 0 4px 1px #BBB;
+            text-align: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        #web-gl {
+            height: 100%;
+            width: 100%;
+        }
+
+        .transform {
+            position: fixed;
+            width: 100%;
+            vertical-align: center;
+            top: 150px;
+            font-family: 'Lato';
+            font-size: 25px;
+            /*font-variant: small-caps;*/
+            font-weight: bold;
+            opacity: 0;
+            margin-left: -40px;
+        }
+
+        .appear {
+            animation-name: textAppear;
+            animation-duration: 1.5s;
+            animation-timing-function: ease-out;
+            animation-fill-mode: forwards;
+        }
+
+        @keyframes textAppear {
+            to {
+                opacity: 1;
+                margin-left: 0;
+            }
+        }
+
+    </style>
+    <script type="text/javascript" src="jquery.min.js"></script>
+    <script type="text/javascript" src="three.js"></script>
+    <script type="text/javascript" src="tween.js"></script>
+    <script type="text/javascript" src="dat.gui.min.js"></script>
+    <script type="text/javascript" src="textureloader.js"></script>
+    <script type="text/javascript" src="OrbitControls.js"></script>
+    <script type="text/javascript" src="OBJLoader.js"></script>
+    <script type="text/javascript" src="ShadowMapViewer.js"></script>
+    <script src="EventsControls.js"></script>
+
+
+
+
+</head>
+<body>
+<span id="goal" style=" margin-left:380px; font-family: 'Press Start 2P', cursive;  font-size: 20px; color: rgb(0,0,0)"></span>
+<div class="container">
+
+
+    <div id="message"></div>
+    <!--webGL-->
+    <div id="web-gl"></div>
+</div>
+
+
+<script id="scriptScene0" type="text/javascript">
+
+
+    var scene;
+    var step ;
+    var tween;
+    var props;
+    var camera, renderer, cameraOrtho, activeCamera, scene;
+    var texture1,texture2;
+    var sphere;
+    var objectLoader;
+    var ambientLight;
+    var torus;
+    var n=1;
+    var collidableMeshList = [];
+    var object1,object2;
+    var MovingCube;
+    var plane1,plane2;
+    var audioLoader,sound,sound2;
+    var goal=0;
+
+    //  Controls Variable
+    var controls;
+    var geometry, parameters, materials = [], particles, vertex, sprite, sprite1, sprite2, sprite3,sprite4,sprite5,sprite6 ,i;
+    var size,color;
+    var group;
+    window.addEventListener('keyup', onDocumentKeyUp, false);
+    window.addEventListener('resize', onWindowResize, false);
+
+    texture1 = new THREE.TextureLoader().load('texture/ball.png');
+    texture2=new THREE.TextureLoader().load('texture/socer_grass.jpg');
+
+    init();
+    animate();
+
+
+    function init() {
+
+
+        scene = new THREE.Scene();
+        //group
+        group = new THREE.Group();
+        scene.add(group);
+        //camera
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 150;
+        camera.position.y=400;
+        camera.lookAt(scene.position);
+
+        //renderer
+        renderer = new THREE.WebGLRenderer();
+        renderer.setClearColor(new THREE.Color(0x000000));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        //Shadow
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+
+     //   Setting the active camera
+        activeCamera = camera;
+
+      //   //  Mouse control
+        controls = new THREE.OrbitControls(activeCamera, renderer.domElement);
+        controls.addEventListener('change', renderer);
+
+      //  controls.enableDamping = true;
+        controls.dampingFactor = 0.07;
+        controls.enableZoom = true;
+
+        //  Position and point the camera to the center of the scene
+        activeCamera.position.x = 0;
+        activeCamera.position.y = 100;
+        activeCamera.position.z = 500;
+        activeCamera.lookAt(scene.position);
+
+        //  Add the output of the renderer to the html element
+        document.getElementById("web-gl").appendChild(renderer.domElement);
+
+
+        //Fog
+        scene.fog = new THREE.Fog(0xffffff, 0.1, 2000);
+
+        //  Surface
+        var surfaceGeometry = new THREE.PlaneGeometry(1200,500);
+        var surfaceMaterial = new THREE.MeshPhongMaterial({color: 0xcccccc, side: THREE.DoubleSide, map:texture2});
+        var surfaceMesh = new THREE.Mesh(surfaceGeometry, surfaceMaterial);
+        surfaceMesh.rotateX(Math.PI / 2);
+        surfaceMesh.position.y = -10;
+        surfaceMesh.receiveShadow = true;
+        scene.add(surfaceMesh);
+
+        //AmbientLight
+        ambientLight = new THREE.AmbientLight(0xffffff);
+        scene.add(ambientLight);
+
+        //Directional Light
+        var dirLight = new THREE.DirectionalLight(0xffffff);
+        dirLight.position.set( 0, 1, 0 );
+        dirLight.castShadow = true;
+        dirLight.shadow.camera.near = 0.1;
+        dirLight.shadow.camera.far = 300;
+        dirLight.shadow.camera.right = 300;
+        dirLight.shadow.camera.left = -300;
+        dirLight.shadow.camera.top = 300;
+        dirLight.shadow.camera.bottom = -300;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        var listener = new THREE.AudioListener();
+        scene.add(listener);
+        audioLoader = new THREE.AudioLoader();
+        sound = new THREE.PositionalAudio(listener);
+        audioLoader.load('goal.wav', function (buffer) {
+            sound.setBuffer(buffer);
+            sound.setRefDistance(20);
+        });
+        scene.add(sound);
+
+        var listener = new THREE.AudioListener();
+        scene.add(listener);
+        audioLoader = new THREE.AudioLoader();
+        sound2 = new THREE.PositionalAudio(listener);
+        audioLoader.load('stadium.wav', function (buffer) {
+            sound2.setBuffer(buffer);
+            sound2.setRefDistance(20);
+            sound2.loop = true;
+            sound2.play();
+        });
+        scene.add(sound2);
+
+        //  ball
+        var sphereGeometry = new THREE.SphereGeometry(10, 32, 32);
+        var sphereMaterial = new THREE.MeshStandardMaterial({
+            color:0xffffff,
+            opacity: 0.5,
+            transparent: false,
+            shininess: 70,
+            map:texture1
+        });
+        sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+        sphere.position.y = 0;
+        sphere.castShadow=true;
+        sphere.receiveShadow=true;
+        scene.add(sphere);
+
+        //khat ha
+        var planeGeometry1 = new THREE.PlaneGeometry(120,0.5);
+        var planeMaterial1= new THREE.MeshBasicMaterial({color: 0x6be70a});
+        plane1 = new THREE.Mesh(planeGeometry1, planeMaterial1);
+        plane1.position.x=480;
+        plane1.position.y=0;
+        plane1.position.z=0;
+        plane1.rotation.y=Math.PI / 2;
+        scene.add(plane1);
+        collidableMeshList.push(plane1);
+
+        var planeGeometry1 = new THREE.PlaneGeometry(120,0.5);
+        var planeMaterial1= new THREE.MeshBasicMaterial({color: 0x6be70a });
+        plane2 = new THREE.Mesh(planeGeometry1, planeMaterial1);
+        plane2.position.x=-480;
+        plane2.position.y=0;
+        plane2.position.z=0;
+        plane2.rotation.y=Math.PI / 2;
+        scene.add(plane2);
+        collidableMeshList.push(plane2);
+
+
+        var loader = new THREE.OBJLoader();
+        loader.load(
+
+            'football goal.obj',
+
+            function ( object1 ) {
+                object1.position.x=480;
+                object1.position.z=50;
+                object1.position.y=-5;
+                object1.scale.set(0.22,0.3,0.2);
+                object1.rotation.y=Math.PI / 2;
+                object1.receiveShadow=true;
+                scene.add( object1 );
+
+
+
+            });
+        var loader = new THREE.OBJLoader();
+        loader.load(
+
+            'football goal.obj',
+
+            function ( object2 ) {
+                object2.position.x=-480;
+                object2.position.z=-50;
+                object2.position.y=-5;
+                object2.scale.set(0.22,0.3,0.2);
+                object2.rotation.y= -Math.PI / 2;
+                object2.receiveShadow=true;
+                scene.add( object2 );
+
+            });
+
+        group.add(sphere);
+        group.add(object1);
+        group.add(object2);
+      // scene.remove(group);
+
+        geometry = new THREE.Geometry();
+        var textureLoader = new THREE.TextureLoader();
+        sprite1 = textureLoader.load("texture/snowflake1.png");
+        sprite2 = textureLoader.load("texture/snowflake2.png");
+        sprite3 = textureLoader.load("texture/snowflake3.png");
+        sprite4 = textureLoader.load("texture/snowflake4.png");
+        sprite5 = textureLoader.load("texture/snowflake5.png");
+        sprite6 = textureLoader.load("texture/snow.png");
+        for (i = 0; i < 10000; i++) {
+
+            vertex = new THREE.Vector3();
+            vertex.x = Math.random() * 2000 - 1000;
+            vertex.y = Math.random() * 2000 - 1000;
+            vertex.z = Math.random() * 2000 - 1000;
+            geometry.vertices.push(vertex);
+        }
+
+        parameters = [
+            // [[Color in HSL], texture, size
+            [[1.0, 0.2, 0.5], sprite2, 7],
+
+        ];
+
+        for (i = 0; i < parameters.length; i++) {
+
+            color = parameters[i][0];
+            sprite = parameters[i][1];
+            size = parameters[i][2];
+
+            materials[i] = new THREE.PointCloudMaterial({
+                size: size,
+                map: sprite,
+                blending: THREE.AdditiveBlending,
+                depthTest: false,
+                transparent: true
+            });
+
+            materials[i].color.setHSL(color[0], color[1], color[2]);
+
+            particles = new THREE.Points(geometry, materials[i]);
+
+            scene.add(particles);
+
+        }
+
+
+        // var target = {x: -10, y: 8, z: -40};
+        // var tween = new TWEEN.Tween(sphere.position).to(target, 7000);
+        // tween.delay(500);
+        // tween.easing(TWEEN.Easing.Back.Out);
+        // tween.start();
+    }
+
+    function animate() {
+
+        var t = (Date.now() / 1000);
+
+        TWEEN.update();
+        renderer.render(scene, camera);
+        renderer.render(scene, activeCamera);
+       // document.getElementById('goal').innerHTML = "Goal:" + goal;
+        requestAnimationFrame(animate);
+        update();
+
+        n=1;
+        controls.update();
+    }
+
+    function onWindowResize() {
+
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+    }
+    function clearText() {
+        document.getElementById('message').innerHTML = '..........';
+    }
+
+    function appendText(txt) {
+        document.getElementById('message').innerHTML += txt;
+    }
+
+
+    function update() {
+        for(i=0;i<1000;i++){
+            particles.rotation.x = Math.random() * 3;
+            particles.rotation.y = Math.random() * 3;
+            particles.rotation.z = Math.random() * 3;
+        }
+        if (scene === scene) {
+            var div = $('.transform');
+            if (step === 1 && sphere.position.x !=500) {
+                    sphere.position.x += 4;
+            }
+            else if (step === 2) {
+                sphere.position.z -=2;
+            }
+            else if (step === 3 && sphere.position.x !=-500) {
+                sphere.position.x -= 4;
+            }
+            else if (step === 4) {
+                sphere.position.z += 2;
+            }
+            else if (step === 5) {
+                sphere.position= sphere.position;
+            }
+
+
+        }
+
+        else {
+            $('.transform').removeClass('appear');
+        }
+        if(  sphere.position.x ==500  ||  sphere.position.x ==-500){
+
+            setTimeout(function(){
+                sphere.position.x = 0;
+                sphere.position.y = 0;
+                sphere.position.z = 0;
+            step=5;
+            },1000);
+        }
+        if(sphere.position.x ==700 ||  sphere.position.x ==-700 || sphere.position.z ==250 ||  sphere.position.z ==-250){
+
+            sphere.position.x = 0;
+            sphere.position.y = 0;
+            sphere.position.z = 0;
+                step=5;
+
+        }
+
+        var originPoint = sphere.position.clone();
+
+        clearText();
+
+        for (var vertexIndex = 0; vertexIndex < sphere.geometry.vertices.length; vertexIndex++) {
+            var localVertex =sphere.geometry.vertices[vertexIndex].clone();
+            var globalVertex = localVertex.applyMatrix4(sphere.matrix);
+            var directionVector = globalVertex.sub(sphere.position);
+
+            var ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
+            var collisionResults = ray.intersectObjects(collidableMeshList);
+            if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length())
+                if(n==1) {
+
+                    document.getElementById('message').innerHTML += "goooooal";
+                    sound.play();
+                    scene.remove(sound);
+                    n++;
+                }
+
+
+        }
+    }
+
+    //keyboard for scene
+    function onDocumentKeyUp(event) {
+        var div = $('.transform');
+        if (event.keyCode == 39 ) {
+            $('.transform').addClass('appear');
+
+            step = 1;
+        }
+        else if (event.keyCode == 38) {
+            step = 2;
+        }
+        else if (event.keyCode == 37) {
+            step = 3;
+        }
+        else if (event.keyCode == 40) {
+            step = 4;
+        }
+        else if (event.keyCode == 32) {
+            step = 5;
+        }
+    }
+
+
+
+</script>
+
+<div class="transform">
+
+</div>
+</body>
+</html>
